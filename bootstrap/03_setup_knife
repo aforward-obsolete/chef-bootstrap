@@ -1,0 +1,3 @@
+#!/bin/bash
+mkdir .chef
+echo "cookbook_path [ './chef/cookbooks' ]" > .chef/knife.rb

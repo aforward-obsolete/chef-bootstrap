@@ -1,0 +1,21 @@
+#!/bin/bash
+NODE=$1 # the name of the DNA file
+TARGET=$2 # the ip of the server 
+TASK=${3-bootstrap}
+
+echo "USAGE: ./deploy <dna> <ip> <bootstrap|solo|resolo>"
+
+if [ ! -f ./bootstrap/root_authorized_keys ]; then
+  echo "PLEASE put your public key in ./bootstrap/root_authorized_keys file, see ./bootstrap/root_authorized_keys.example"
+  exit 0
+fi
+
+echo ">>> Uploading Authorized Keys For Bootstrap"
+ssh root@$TARGET 'mkdir -p ~/.ssh'
+scp ./bootstrap/root_authorized_keys root@$TARGET:~/.ssh/authorized_keys
+
+echo ">>> Running chef:$TASK"
+cap -S target=$TARGET -S node=$NODE -S user=root chef:$TASK
+
+echo "Removing SSH access to root"
+ssh root@$TARGET 'rm ~/.ssh/authorized_keys'
