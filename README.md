@@ -30,6 +30,24 @@ Install the necessarily gems
 bundle install
 ```
 
+server preconditions
+==============
+
+Please ensure your new server has a root password, and that an ssh server / client is installed.  For example,
+
+This will allow you give your root user a password:
+
+```
+sudo su root
+passwd
+```
+
+And, this will install an ssh server / client on Ubuntu.
+
+```
+apt-get install openssh-server openssh-client
+```
+
 deploying
 ==============
 
