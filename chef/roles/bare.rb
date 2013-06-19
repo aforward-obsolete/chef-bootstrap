@@ -1,3 +1,3 @@
 name 'bare'
-description 'Create a simple deployer user'
+description 'Install helloworld'
 run_list %w(helloworld)
