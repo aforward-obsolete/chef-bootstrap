@@ -6,10 +6,8 @@ role :target, target if exists?(:target)
 cwd = File.expand_path(File.join(File.dirname(__FILE__), '..', 'chef'))
 chef_dir = '/var/chef-solo'
 dna_dir = '/etc/chef'
-gem_version = 'rubygems-1.8.12'
-ohai_version = '6.16.0'
-# chef_version = '10.24.0'
-chef_version = "11.4.4"
+ohai_version = '7.0.2'
+chef_version = "11.12.2"
 
 namespace :chef do
   desc "Bootstrap your server to enable Chef-Solo"
@@ -29,20 +27,22 @@ namespace :chef do
     
     task :ruby, :roles => :target do
       sudo 'apt-get update'
-      sudo 'apt-get -y install ruby ruby-dev libopenssl-ruby rdoc ri irb build-essential wget ssl-cert git-core'
-
-      #Install rubygems from source
-      run "cd /tmp &&
-         wget http://production.cf.rubygems.org/rubygems/#{gem_version}.tgz &&
-         tar zxf #{gem_version}.tgz
-        "
-      sudo "ruby /tmp/#{gem_version}/setup.rb --no-format-executable"      
+      sudo 'sudo apt-get install -y git-core curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev'
+      sudo 'sudo apt-get install -y ruby ruby-dev rdoc ri irb wget ssl-cert'
+      sudo 'apt-get -y install vim'
+      run "if [ ! -e /usr/local/etc/openssl/certs/cacert.pem ]; then mkdir -p /usr/local/etc/openssl/certs; wget --directory-prefix /usr/local/etc/openssl/certs http://curl.haxx.se/ca/cacert.pem; fi"
     end
 
     desc "Install Chef and Ohai gems as root"
     task :chef, :roles => :target do
-      sudo_env "gem install ohai -v #{ohai_version} --no-ri --no-rdoc"
-      sudo_env "gem install chef -v #{chef_version} --no-ri --no-rdoc"
+      {
+        "ohai" => ohai_version,
+        "chef" => chef_version,
+      }.each do |gem_name,gem_version|
+        sudo_env "gem uninstall #{gem_name} --version '>#{gem_version}'"
+        sudo_env "gem install #{gem_name} -v #{gem_version} --no-ri --no-rdoc"
+        sudo_env "gem cleanup #{gem_name}"
+      end
     end
 
     desc "Install Cookbook Repository from cwd"
@@ -58,7 +58,8 @@ namespace :chef do
       run "mkdir -m 0775 -p #{dna_dir}"
       put %Q(file_cache_path "#{chef_dir}"
 cookbook_path ["#{chef_dir}/cookbooks", "#{chef_dir}/site-cookbooks"]
-role_path "#{chef_dir}/roles"), "#{dna_dir}/solo.rb", :via => :scp, :mode => "0644"
+role_path "#{chef_dir}/roles"
+ssl_verify_mode :verify_peer), "#{dna_dir}/solo.rb", :via => :scp, :mode => "0644"
       reinstall_dna
     end
       
@@ -76,7 +77,7 @@ role_path "#{chef_dir}/roles"), "#{dna_dir}/solo.rb", :via => :scp, :mode => "06
 
   desc "Execute Chef-Solo"
   task :solo, :roles => :target do
-    sudo_env "chef-solo -c #{dna_dir}/solo.rb -j #{dna_dir}/dna.json -l debug -N #{node}"
+    sudo_env "chef-solo -c #{dna_dir}/solo.rb -j #{dna_dir}/dna.json -l info -N #{node}"
   end
 
   desc "Reinstall and Execute Chef-Solo"
