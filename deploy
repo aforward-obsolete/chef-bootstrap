@@ -1,6 +1,6 @@
 #!/bin/bash
 NODE=$1 # the name of the DNA file
-TARGET=$2 # the ip of the server 
+TARGET=$2 # the ip of the server
 TASK=${3-bootstrap}
 
 echo "USAGE: ./deploy <dna> <ip> <bootstrap|solo|resolo>"
@@ -14,8 +14,9 @@ echo ">>> Uploading Authorized Keys For Bootstrap"
 ssh root@$TARGET 'mkdir -p ~/.ssh'
 scp ./bootstrap/root_authorized_keys root@$TARGET:~/.ssh/authorized_keys
 
-echo ">>> Running chef:$TASK"
-cap -S target=$TARGET -S node=$NODE -S user=root chef:$TASK
+CAP_CALL="bundle exec cap chef:$TASK TARGET=$TARGET NODE=$NODE USER=root"
+echo ">>> Running chef:$TASK ($CAP_CALL)"
+$CAP_CALL
 
 echo "Removing SSH access to root"
 ssh root@$TARGET 'rm ~/.ssh/authorized_keys'
