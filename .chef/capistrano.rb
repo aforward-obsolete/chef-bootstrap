@@ -12,8 +12,10 @@ set :stage, :production
 cwd = File.expand_path(File.join(File.dirname(__FILE__), '..', 'chef'))
 chef_dir = '/var/chef-solo'
 dna_dir = '/etc/chef'
-ohai_version = '7.0.2'
-chef_version = "11.12.2"
+ohai_version = '7.0.4'
+chef_version = "11.12.8"
+rdoc_version = '4.1.1'
+ri_version = ''
 
 namespace :chef do
   desc "Bootstrap your server to enable Chef-Solo"
@@ -34,13 +36,17 @@ namespace :chef do
 
     task :ruby do
       on roles(:target), in: :sequence, wait: 1 do
+        execute 'echo "gem: --no-ri --no-rdoc" > ~/.gemrc'
         execute 'apt-get update'
-        # execute 'apt-get install -y git-core curl zlib1g-dev build-essential libssl-dev libreadline-dev libyaml-dev libsqlite3-dev sqlite3 libxml2-dev libxslt1-dev wget ssl-cert'
-        # execute 'apt-get -y install vim'
         execute 'apt-get install -y ruby1.9.1 ruby1.9.1-dev rubygems1.9.1 irb1.9.1 ri1.9.1 rdoc1.9.1 build-essential libopenssl-ruby1.9.1 libssl-dev zlib1g-dev'
-        execute 'update-alternatives --config ruby'
-        execute 'update-alternatives --config gem'
         execute 'apt-get install -y wget ssl-cert'
+        [
+          "gem install rubygems-update",
+          "update_rubygems",
+          "gem update --system",
+        ].each do |cmd|
+          execute cmd
+        end
 
         if test("[ ! -e /usr/local/etc/openssl/certs/cacert.pem ]")
           execute "mkdir -p /usr/local/etc/openssl/certs"
@@ -54,6 +60,7 @@ namespace :chef do
     task :chef do
       on roles(:target), in: :sequence, wait: 1 do
         {
+          "rdoc" => rdoc_version,
           "ohai" => ohai_version,
           "chef" => chef_version,
         }.each do |gem_name,gem_version|
@@ -61,7 +68,11 @@ namespace :chef do
             execute "gem uninstall #{gem_name} --version '>#{gem_version}'"
           end
           unless test("gem list #{gem_name} --version #{gem_version} -i")
-            execute "gem install #{gem_name} -v #{gem_version} --no-ri --no-rdoc"
+            if gem_name == "rdoc"
+              execute "mv `which rdoc` `which rdoc`_old"
+              execute "mv `which ri` `which ri`_old"
+            end
+            execute "gem install #{gem_name} -v #{gem_version}"
             execute "gem cleanup #{gem_name}"
           end
         end
