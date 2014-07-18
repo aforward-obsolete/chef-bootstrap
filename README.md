@@ -48,6 +48,14 @@ And, this will install an ssh server / client on Ubuntu.
 apt-get install openssh-server openssh-client
 ```
 
+CHEF works as root, so you will need to enable root login.
+```
+vi /etc/ssh/sshd_config
+
+# Change PermitRootLogin to be
+PermitRootLogin yes
+```
+
 deploying
 ==============
 
